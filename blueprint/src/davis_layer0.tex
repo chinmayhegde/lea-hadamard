@@ -1,0 +1,20 @@
+% Single-node blueprint testing Lea on a real Davis layer-0 leaf.
+% Source: Davis (arXiv:2603.30013), Lemma "Gaussian radial moments"
+% (\label{lem:gaussian-radial} in his blueprint).
+%
+% Statement is pure real analysis — no Hadamard-specific setup required.
+% Mathlib has Gaussian integral / moment infrastructure.
+
+\chapter{Davis layer-0 first test}
+\label{chap:davis-l0}
+
+\begin{lemma}[Gaussian radial moments]
+\label{lem:gaussian-radial}
+\lean{LeaHadamard.Hadamard.gaussian_radial_moments}
+For every integer $m \ge 0$, there exists a constant $C_m > 0$ such that
+for every integer $d \ge 1$ and every real $t \ge 1$,
+\[
+  \int_{\mathbb{R}^d} \|x\|^{2m}\,e^{-2t\,\|x\|^2}\,dx
+  \;\le\; C_m\,\bigl(d/t\bigr)^m \cdot \bigl(\pi/(2t)\bigr)^{d/2}.
+\]
+\end{lemma}
