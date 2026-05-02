@@ -1,0 +1,25 @@
+.lake/
+*.olean
+*.ilean
+*.trace
+build/
+
+.DS_Store
+.vscode/
+.idea/
+
+CLAUDE.md
+.claude.local.md
+
+# Python tooling
+tools/__pycache__/
+tools/.venv/
+tools/*.pyc
+
+# Blueprint build artefacts
+blueprint/web/
+blueprint/.venv/
+
+# Local working artefacts (kept out of git until promoted)
+runs/
+*.local.json

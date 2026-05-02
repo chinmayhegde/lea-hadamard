@@ -1,0 +1,37 @@
+% Sample blueprint chapter for parser smoke-testing.
+% Demonstrates: theorem, lemma, definition, dependency tracking, leanok markers.
+
+\chapter{Sample chapter}
+\label{chap:sample}
+
+\begin{definition}[Even integer]
+\label{def:even}
+\lean{Even}
+An integer $n$ is \emph{even} if there exists an integer $k$ with $n = 2k$.
+\end{definition}
+
+\begin{lemma}[Sum of evens is even]
+\label{lem:sum-even}
+\lean{Even.add}\leanok
+\uses{def:even}
+For all integers $a, b$, if $a$ and $b$ are both even, then $a + b$ is even.
+\end{lemma}
+
+\begin{lemma}[Product of evens is even]
+\label{lem:prod-even}
+\lean{Even.mul}
+\uses{def:even}
+For all integers $a, b$, if $a$ is even, then $a b$ is even.
+\end{lemma}
+
+\begin{theorem}[Even sum-of-products]
+\label{thm:sum-prod-even}
+\lean{Even.add_mul}
+\uses{lem:sum-even, lem:prod-even}
+For all integers $a, b, c$, if $a, b$ are even, then $ac + bc$ is even.
+\end{theorem}
+
+\begin{proof}
+\uses{lem:sum-even, lem:prod-even}
+Apply Lemma~\ref{lem:prod-even} twice and Lemma~\ref{lem:sum-even} once.
+\end{proof}
