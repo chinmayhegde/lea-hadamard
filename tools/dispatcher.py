@@ -1,0 +1,269 @@
+"""Blueprint-driven Lea dispatcher.
+
+Reads a blueprint, finds nodes whose dependencies are all proven, and
+dispatches Lea on each unproven node. Tracks per-node status in a JSON
+file. Validates each completion with `lake build`.
+
+Usage:
+    python3 tools/dispatcher.py \\
+        --blueprint blueprint/src/test_dispatch.tex \\
+        --lake-root /home/chinmay-gcp/lea-hadamard \\
+        --lea-root /home/chinmay-gcp/lea-prover \\
+        --tracker runs/test_tracker.json \\
+        --target-module LeaHadamard.Test \\
+        --limit 1
+
+The dispatcher itself never modifies Lean source. Lea's tools
+(`write_file`, `edit_file`, `lean_check`) are the only writers.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import subprocess
+import sys
+import time
+from dataclasses import dataclass, field, asdict
+from datetime import datetime, timezone
+from pathlib import Path
+
+# Local sibling import
+sys.path.insert(0, str(Path(__file__).parent))
+from blueprint_parser import Node, parse_tree
+
+
+@dataclass
+class TrackerEntry:
+    label: str
+    lean: str | None
+    status: str = "pending"  # pending | in_progress | done | stuck
+    attempts: int = 0
+    cost_usd: float = 0.0
+    last_error: str = ""
+    started_at: str = ""
+    completed_at: str = ""
+    lean_proof_lines: int = 0
+    target_file: str = ""
+
+
+def load_tracker(path: Path, nodes: list[Node]) -> dict[str, TrackerEntry]:
+    if path.exists():
+        data = json.loads(path.read_text())
+        return {k: TrackerEntry(**v) for k, v in data.items()}
+    return {n.label: TrackerEntry(label=n.label, lean=n.lean) for n in nodes}
+
+
+def save_tracker(tracker: dict[str, TrackerEntry], path: Path):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({k: asdict(v) for k, v in tracker.items()}, indent=2))
+
+
+def find_ready(nodes: list[Node], tracker: dict[str, TrackerEntry]) -> list[Node]:
+    """Nodes whose deps are all 'done' and which themselves are not 'done'."""
+    ready = []
+    for n in nodes:
+        if tracker[n.label].status == "done":
+            continue
+        if all(tracker.get(d, TrackerEntry(d, None)).status == "done" for d in n.uses):
+            ready.append(n)
+    return ready
+
+
+def dep_summaries(node: Node, by_label: dict[str, Node],
+                  tracker: dict[str, TrackerEntry]) -> str:
+    if not node.uses:
+        return "(none — this is a leaf node; rely on Mathlib only)"
+    lines = []
+    for d in node.uses:
+        dep = by_label.get(d)
+        if dep and tracker.get(d, TrackerEntry(d, None)).status == "done" and dep.lean:
+            body = re.sub(r"\s+", " ", dep.body or "").strip()
+            lines.append(f"- `{dep.lean}`: {body[:300]}")
+    return "\n".join(lines) if lines else "(deps listed but not yet resolved — should not happen)"
+
+
+def build_prompt(node: Node, by_label: dict[str, Node],
+                 tracker: dict[str, TrackerEntry],
+                 lake_root: Path, target_path: Path) -> str:
+    deps_text = dep_summaries(node, by_label, tracker)
+    body = re.sub(r"\s+", " ", node.body or "").strip()
+    return f"""You are formalizing a research math result in Lean 4 (Lean v4.28.0 + Mathlib v4.28.0).
+
+THEOREM TO PROVE:
+{node.title or '(untitled)'}
+
+STATEMENT (LaTeX, transliterate to Lean):
+{body}
+
+REQUIRED LEAN NAME (use this exact name):
+{node.lean}
+
+ALREADY-PROVEN PREREQUISITES YOU MAY USE:
+{deps_text}
+
+OUTPUT FILE (absolute path):
+{target_path}
+
+INSTRUCTIONS:
+1. Create the file at the absolute path above. Add appropriate Mathlib imports
+   (e.g. `import Mathlib`).
+2. Inside, declare the theorem with name `{node.lean}` and prove it.
+3. The Lake project lives at `{lake_root}`. Use `lean_check` with that path
+   (or its files) to verify your work, and `search_mathlib` for relevant lemmas.
+4. The final proof must NOT contain `sorry`. Stop as soon as `lean_check`
+   returns clean.
+5. Do not modify any file other than the OUTPUT FILE above.
+6. Do not redefine any lemma that already exists in Mathlib under the same name.
+"""
+
+
+def run_lea(prompt: str, lea_root: Path, model: str | None,
+            max_turns: int, lea_log_path: Path) -> tuple[bool, str, float]:
+    """Invoke `uv run lea` with the prompt, capture full output."""
+    cmd = ["uv", "run", "lea", "--max-turns", str(max_turns)]
+    if model:
+        cmd.extend(["-m", model])
+    cmd.append(prompt)
+    t0 = time.time()
+    proc = subprocess.run(
+        cmd, capture_output=True, text=True, cwd=str(lea_root), timeout=7200,
+    )
+    elapsed = time.time() - t0
+    output = (proc.stdout or "") + "\n" + (proc.stderr or "")
+    lea_log_path.parent.mkdir(parents=True, exist_ok=True)
+    lea_log_path.write_text(output)
+    cost = parse_lea_cost(output)
+    success = parse_lea_success(output)
+    return success, output, cost
+
+
+def parse_lea_cost(output: str) -> float:
+    """Extract Lea's reported cost from her summary line, e.g. '~$0.0898'."""
+    m = re.search(r"~\$([0-9]*\.?[0-9]+)", output)
+    return float(m.group(1)) if m else 0.0
+
+
+def parse_lea_success(output: str) -> bool:
+    """Heuristic: Lea exits with a 'done' message vs 'max turns reached'."""
+    last = output.strip().split("\n")[-30:]
+    last_text = "\n".join(last)
+    if "max turns reached" in last_text.lower():
+        return False
+    if "Error:" in last_text and "max turns" in last_text:
+        return False
+    return True
+
+
+def lake_build(lake_root: Path, lake_log_path: Path) -> tuple[bool, str]:
+    """Run `lake build` in the project root; return (success, log)."""
+    proc = subprocess.run(
+        ["lake", "build"], capture_output=True, text=True, cwd=str(lake_root), timeout=900,
+    )
+    output = (proc.stdout or "") + "\n" + (proc.stderr or "")
+    lake_log_path.parent.mkdir(parents=True, exist_ok=True)
+    lake_log_path.write_text(output)
+    if proc.returncode != 0:
+        return False, output
+    if "uses 'sorry'" in output:
+        return False, output + "\n[REJECTED: sorry detected]"
+    if re.search(r"\berror:", output):
+        return False, output
+    return True, output
+
+
+def label_to_path(label: str, target_module: str) -> Path:
+    """LeaHadamard.Test + 'lem:add-zero-left' -> LeaHadamard/Test/Lem_add_zero_left.lean"""
+    safe = re.sub(r"[^A-Za-z0-9]", "_", label)
+    safe = safe[0].upper() + safe[1:] if safe else "X"
+    return Path(target_module.replace(".", "/")) / f"{safe}.lean"
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--blueprint", type=Path, required=True)
+    ap.add_argument("--lake-root", type=Path, required=True)
+    ap.add_argument("--lea-root", type=Path, required=True,
+                    help="Path to lea-prover repo (cwd for `uv run lea`)")
+    ap.add_argument("--tracker", type=Path, required=True)
+    ap.add_argument("--target-module", default="LeaHadamard.Auto",
+                    help="Lean namespace under which Lea writes proofs")
+    ap.add_argument("--model", default=None,
+                    help="Lea model override (default: Lea's default)")
+    ap.add_argument("--max-turns", type=int, default=30)
+    ap.add_argument("--limit", type=int, default=1,
+                    help="Maximum nodes to dispatch this run")
+    ap.add_argument("--logs-dir", type=Path, default=None,
+                    help="Per-dispatch logs go here (default: alongside tracker)")
+    args = ap.parse_args()
+
+    logs_dir = args.logs_dir or args.tracker.parent / "logs"
+
+    nodes = parse_tree(args.blueprint)
+    by_label = {n.label: n for n in nodes}
+    tracker = load_tracker(args.tracker, nodes)
+
+    print(f"Loaded {len(nodes)} blueprint nodes; "
+          f"done={sum(1 for v in tracker.values() if v.status == 'done')}/"
+          f"{len(tracker)}")
+
+    ready = find_ready(nodes, tracker)
+    if not ready:
+        done = sum(1 for v in tracker.values() if v.status == "done")
+        if done == len(tracker):
+            print("All nodes done.")
+        else:
+            stuck = [k for k, v in tracker.items() if v.status == "stuck"]
+            blocked = [k for k, v in tracker.items() if v.status == "pending"]
+            print(f"Nothing ready. stuck={stuck} blocked={blocked}")
+        return 0
+
+    print(f"Ready to dispatch ({len(ready)}): {', '.join(n.label for n in ready)}")
+    print(f"Will dispatch up to {args.limit} this run.")
+
+    dispatched = 0
+    for node in ready:
+        if dispatched >= args.limit:
+            break
+
+        target_rel = label_to_path(node.label, args.target_module)
+        target_abs = args.lake_root / target_rel
+        prompt = build_prompt(node, by_label, tracker, args.lake_root, target_abs)
+
+        print(f"\n=== {node.label} -> {node.lean} ===")
+        print(f"  target: {target_rel}")
+        tracker[node.label].status = "in_progress"
+        tracker[node.label].started_at = datetime.now(timezone.utc).isoformat()
+        tracker[node.label].attempts += 1
+        tracker[node.label].target_file = str(target_rel)
+        save_tracker(tracker, args.tracker)
+
+        lea_log = logs_dir / f"{node.label.replace(':', '_')}.lea.log"
+        ok_lea, _, cost = run_lea(prompt, args.lea_root, args.model,
+                                  args.max_turns, lea_log)
+        tracker[node.label].cost_usd += cost
+        print(f"  Lea: success={ok_lea} cost=~${cost:.4f} log={lea_log}")
+
+        # Validate with lake build regardless of Lea's self-reported success.
+        lake_log = logs_dir / f"{node.label.replace(':', '_')}.lake.log"
+        ok_lake, lake_out = lake_build(args.lake_root, lake_log)
+        if ok_lake and target_abs.exists():
+            tracker[node.label].status = "done"
+            tracker[node.label].completed_at = datetime.now(timezone.utc).isoformat()
+            tracker[node.label].lean_proof_lines = len(target_abs.read_text().splitlines())
+            print(f"  ✓ done ({tracker[node.label].lean_proof_lines} lines)")
+        else:
+            tracker[node.label].status = "stuck"
+            tracker[node.label].last_error = lake_out[-800:]
+            print(f"  ✗ stuck (build failed or file missing)")
+
+        save_tracker(tracker, args.tracker)
+        dispatched += 1
+
+    print(f"\nDispatched {dispatched} nodes. Tracker: {args.tracker}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

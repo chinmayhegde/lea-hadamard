@@ -1,0 +1,19 @@
+% Trivial test blueprint for dispatcher MVP.
+% Two lemmas with a real dependency, in a fresh namespace so Lea must prove
+% them rather than reusing Mathlib lemmas of the same name.
+
+\chapter{Dispatcher smoke test}
+\label{chap:dispatch-test}
+
+\begin{lemma}[Add zero left]
+\label{lem:add-zero-left}
+\lean{LeaHadamard.Test.add_zero_left}
+For every natural number $n$, $0 + n = n$.
+\end{lemma}
+
+\begin{lemma}[Add zero both]
+\label{lem:add-zero-both}
+\lean{LeaHadamard.Test.add_zero_both}
+\uses{lem:add-zero-left}
+For every natural number $n$, $(0 + n) + 0 = n$.
+\end{lemma}
