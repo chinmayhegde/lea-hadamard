@@ -84,9 +84,40 @@ def dep_summaries(node: Node, by_label: dict[str, Node],
     return "\n".join(lines) if lines else "(deps listed but not yet resolved — should not happen)"
 
 
+def lookup_mathlib_hint(name: str, mathlib_root: Path) -> str:
+    """Look up a Mathlib lemma's signature by name. Returns '<name>: <signature>'
+    or empty string if not found. Searches `theorem|lemma <name>` definitions."""
+    proc = subprocess.run(
+        ["grep", "-rEn", "--include=*.lean",
+         rf"^(theorem|lemma)\s+{re.escape(name)}\b",
+         str(mathlib_root)],
+        capture_output=True, text=True, timeout=180,
+    )
+    if proc.returncode != 0 or not proc.stdout.strip():
+        return ""
+    line = proc.stdout.splitlines()[0]
+    parts = line.split(":", 2)
+    if len(parts) < 3:
+        return f"- `{name}` (found, but couldn't parse signature)"
+    file, _, sig = parts
+    sig = sig.strip()
+    return f"- `{name}` (in {Path(file).name}): `{sig[:280]}`"
+
+
+def collect_hints(hint_names: list[str], mathlib_root: Path) -> str:
+    if not hint_names:
+        return "(none provided; use search_mathlib to find candidates)"
+    lines = []
+    for name in hint_names:
+        h = lookup_mathlib_hint(name, mathlib_root)
+        lines.append(h or f"- `{name}` (not found by grep — check spelling or import path)")
+    return "\n".join(lines)
+
+
 def build_prompt(node: Node, by_label: dict[str, Node],
                  tracker: dict[str, TrackerEntry],
-                 lake_root: Path, target_path: Path) -> str:
+                 lake_root: Path, target_path: Path,
+                 hints_text: str = "(none provided)") -> str:
     deps_text = dep_summaries(node, by_label, tracker)
     body = re.sub(r"\s+", " ", node.body or "").strip()
     return f"""You are formalizing a research math result in Lean 4 (Lean v4.28.0 + Mathlib v4.28.0).
@@ -103,6 +134,9 @@ REQUIRED LEAN NAME (use this exact name):
 ALREADY-PROVEN PREREQUISITES YOU MAY USE:
 {deps_text}
 
+RELEVANT MATHLIB LEMMAS (curated hints — these are likely useful):
+{hints_text}
+
 OUTPUT FILE (absolute path):
 {target_path}
 
@@ -116,6 +150,9 @@ INSTRUCTIONS:
    returns clean.
 5. Do not modify any file other than the OUTPUT FILE above.
 6. Do not redefine any lemma that already exists in Mathlib under the same name.
+7. Strongly prefer the curated Mathlib hints above over re-deriving from scratch.
+   When in doubt, search via signature (`search_mathlib` with type-shaped query)
+   rather than by name guessing.
 """
 
 
@@ -196,6 +233,11 @@ def main():
                     help="Maximum nodes to dispatch this run")
     ap.add_argument("--logs-dir", type=Path, default=None,
                     help="Per-dispatch logs go here (default: alongside tracker)")
+    ap.add_argument("--hints", type=str, default="",
+                    help="Comma-separated Mathlib lemma names to surface as hints")
+    ap.add_argument("--mathlib-root", type=Path,
+                    default=Path("/home/chinmay-gcp/lea-hadamard/.lake/packages/mathlib"),
+                    help="Path to local Mathlib for hint signature lookup")
     args = ap.parse_args()
 
     logs_dir = args.logs_dir or args.tracker.parent / "logs"
@@ -229,7 +271,10 @@ def main():
 
         target_rel = label_to_path(node.label, args.target_module)
         target_abs = args.lake_root / target_rel
-        prompt = build_prompt(node, by_label, tracker, args.lake_root, target_abs)
+        hint_names = [h.strip() for h in args.hints.split(",") if h.strip()]
+        hints_text = collect_hints(hint_names, args.mathlib_root)
+        prompt = build_prompt(node, by_label, tracker, args.lake_root, target_abs,
+                              hints_text=hints_text)
 
         print(f"\n=== {node.label} -> {node.lean} ===")
         print(f"  target: {target_rel}")
