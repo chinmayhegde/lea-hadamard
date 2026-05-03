@@ -144,6 +144,31 @@ LOCAL PROJECT MODULES YOU CAN IMPORT:
   parent lattice `Lambda_0`, the predicate `InLambda`, mod-2 reduction,
   vertex-degree, plus `mem_Lambda` (membership simp). USE THIS rather
   than redefining Λ from scratch.
+- `LeaHadamard.Mathlib.SignAverage` — discrete sign-average moment layer:
+  `avgSigns n f := (∑ σ : Fin n → Bool, f σ) / 2^n`,
+  `linearX n x σ := ∑ i, x i * rad (σ i)`,
+  linearity (`avgSigns_const`, `_add`, `_mul_const_left`, `_sum`),
+  splitting (`avgSigns_split_last`),
+  second moment (`avgSigns_linearX_sq : avgSigns n (linearX n x · ^ 2) = ∑ i, (x i)^2`),
+  fourth moment (`avgSigns_linearX_four : avgSigns n (linearX n x · ^ 4) = 3·(∑ x²)² - 2·∑ x⁴`).
+  USE THIS for any Rademacher-moment computation; do not re-derive these.
+- `LeaHadamard.Mathlib.BonamiTwoPoint` — the Bonami two-point inequality
+  (`bonami_two_point_fourth : ((a+b)⁴+(a−b)⁴)/2 ≤ 9·(((a+b)²+(a−b)²)/2)²`),
+  the L⁴-L² bound for linear forms
+  (`avgSigns_linearX_fourth_le_three_sq_second_sq`), and the two-variable
+  base case `bonami_two_point_two_var`.
+- `LeaHadamard.Mathlib.Hypercontractive` — the degree-2 hypercontractive
+  bound on the discrete cube. Defines `WalshDeg1`/`WalshDeg2` structures
+  with explicit constant/linear/quadratic coefficient fields, evaluation
+  maps `evalDeg1`/`eval`, Walsh orthogonality (`avgSigns_rad_eq_zero`,
+  `avgSigns_rad_mul_rad_eq_zero`, `avgSigns_linearX_eq_zero`,
+  `avgSigns_linearX_cube`), the L² Parseval identity
+  `avgSigns_walshDeg2_sq`, the degree-1 case `hc_degree1_fourth`,
+  Cauchy-Schwarz on `avgSigns` (`avgSigns_mul_sq_le`), and the headline
+  `hc_degree2_fourth : avgSigns n (eval p · ^ 4) ≤ 81·(avgSigns n (eval p · ^ 2))²`
+  (this is `‖f‖_4 ≤ 3·‖f‖_2` for f a Walsh polynomial of degree ≤ 2,
+  i.e. the Bonami-Beckner inequality at p=4, q=2). USE THIS for `lem:hc`
+  and any hypercontractive-flavored bound on Rademacher polynomials.
 
 If you need `ψ`, `Λ`, `X_λ`, `s(λ)`, or related objects, **check these
 modules first via `bash cat <path>` and `import` them**, do not redefine.

@@ -282,6 +282,157 @@ placeholder definition that trivialises the equation.
 
 ---
 
+## Infrastructure-cliff Stage 1 — `LeaHadamard/Mathlib/SignAverage.lean` — landed 2026-05-03 PM
+
+**Notable: cliff-crossing is Lea's, not Mathlib's, not Davis's.**
+
+This file has no Mathlib analogue. It also has no Davis analogue we
+can cite directly: Davis's parallel infrastructure
+(`HadamardCn3DiscreteMoments.lean`) lives under namespace `Cn3Torus.*`
+on `Fin 2`-encoded signs, not importable into our project. Lea
+read-only consulted Davis's file for structure, then wrote a clean
+`Bool`-based version from scratch.
+
+**Notable encoding deviation: `Bool` over `Fin 2`.**
+
+- Davis: signs as `Fin 2` (so `rad : Fin 2 → ℝ`, `σ : Fin n → Fin 2`).
+- Lea: signs as `Bool` (so `rad : Bool → ℝ`, `σ : Fin n → Bool`).
+
+Both are mathematically equivalent. Lea's choice fits Mathlib's
+existing `Bool`-enumeration lemmas (`Fintype.sum_bool`, `Fin.snoc`
+applied to `Bool`-valued functions) more naturally. Slightly cleaner
+proofs, slightly less plumbing.
+
+**Notable design move**: Lea defined her own
+`boolVecLastEquiv : (Fin (n+1) → Bool) ≃ (Fin n → Bool) × Bool` to
+bridge between the two encodings of "n+1 signs as n signs plus one
+more bit". Davis uses raw `Fin.snoc` decompositions throughout. The
+equiv version is, again, more idiomatic to Mathlib style.
+
+**Cost / size**: 195 lines, ~$13 reported / ~$4 actual, 19 turns.
+**Trust**: clean Mathlib axioms.
+
+This is the first file in `LeaHadamard/Mathlib/` — a directory
+specifically for reusable infrastructure built by Lea that we'd
+eventually want to upstream to Mathlib (modulo cleanup).
+
+**Stage 2 update (2026-05-03 PM)**: `avgSigns_linearX_four` landed in
+the same file 10 turns / ~$0.83 actual after Stage 1, bringing the
+file to 261 lines. Stage 2 *uses* Stage 1's second-moment identity in
+its inductive step — the dependency wove cleanly. Cumulative cost for
+the full discrete moment layer (both moment identities + helpers):
+**~$5 actual, 29 turns**. Originally projected $80-250 actual. We
+underpriced our own infrastructure by ~15-50× — empirically,
+cliff-crossing work at this scope is no harder per-line than
+Mathlib-adjacent layer-0 lemmas, contra our pre-experiment mental
+model.
+
+**Stage 4 update (2026-05-03 PM)**: `LeaHadamard/Mathlib/BonamiTwoPoint.lean`
+landed in 14 turns / ~$1.27 actual, 107 lines, axiom-clean. Three theorems:
+linear-form L⁴-L² corollary, classical Bonami two-point at L⁴, and the
+Bool×Bool base case for arbitrary `f`. The proofs use `nlinarith` with
+explicit square-nonneg hints and `Fintype.sum_prod_type`/`Fintype.sum_bool`
+to flatten finite sums. **This is real-analytic inequality work, not
+algebraic identity work** — and it still came in at ~10% of projected
+cost. That's a second qualitatively different infra class (after
+algebraic identities) confirmed cheap. Cumulative cliff infra now
+**~$6.7 actual, 43 turns, 368 lines** across Stages 1+2+4.
+
+---
+
+## Infrastructure-cliff Stage 5 — `LeaHadamard/Mathlib/Hypercontractive.lean` — landed 2026-05-03 PM
+
+**Notable: largest single Lea-authored artifact in the project (834 lines).**
+
+This file contains a substantial slice of the Bonami-Beckner /
+hypercontractive theory on the discrete cube, none of which exists
+in Mathlib v4.28.0. It is the qualitatively hardest single dispatch
+of the project so far: structures, derived definitions, Walsh
+orthogonality via flip-bit involutions, the L² Parseval identity for
+degree-≤-2 Walsh polynomials, Cauchy-Schwarz on the `avgSigns` measure
+(with real Mathlib plumbing through `div_le_div_iff₀`), and the
+headline `hc_degree2_fourth` (the Bonami-Beckner inequality at
+`(p,q)=(4,2)` with constant 81), proved by induction on `n` using
+the `tail` / `lastSlice` polynomial decomposition.
+
+**Cost / size**: 71 turns, ~$93.6 reported / **~$31 actual**, 834
+lines. Cost-per-line ~$0.037 — comparable to layer-0 lemma work,
+not the 5-10× premium we feared from the "infrastructure cliff"
+framing.
+
+**Comparison to Davis**: Davis's repo doesn't appear to contain a
+parallel hypercontractive module by this name. He sidesteps the
+need for an explicit Bonami-Beckner inequality in his pipeline
+(via direct moment computations and Lindeberg-style arguments).
+Lea instead proved the inequality directly — a *different* proof
+architecture that lands at the same downstream lemma (`lem:hc`).
+
+**Trust**: clean Mathlib axioms (`propext, Classical.choice,
+Quot.sound`) on every theorem in the file.
+
+This module + Stages 1+2+4 form a self-contained discrete
+hypercontractivity layer that is plausibly upstream-Mathlib-quality
+modulo cleanup. Worth cataloguing as a candidate Mathlib PR after
+the project settles.
+
+---
+
+## `lem:hc` — landed 2026-05-03 PM (Stage 6, retry)
+
+**Notable: previously-cheated layer-0 leaf, now cleanly closed.**
+
+The earlier `lem:hc` attempt was caught as a statement-tautologization
+cheat (took the conclusion as a hypothesis, proved by identity). Stage 6
+retried under the same dispatcher prompt + the new
+`LeaHadamard.Mathlib.Hypercontractive` infrastructure exposed as a hint.
+
+**Outcome**: Lea reduced `fixedDegreeHC_degree2_W_fourth` to a one-line
+application of `hc_degree2_fourth` from Stage 5. The proof is a single
+term-mode application; the file is mostly docstring explaining the scope
+narrowing (the blueprint states the *general* Bonami-Beckner inequality
+for arbitrary `p ≥ 2` and degree `q`, but the Lean target name
+`fixedDegreeHC_degree2_W_fourth` clearly specializes to `(p,q)=(4,2)`
+Walsh — the only case the paper actually invokes, and the canonical
+specialization Davis's own Lean targets).
+
+**Cost / size**: 9 turns, ~$1.73 reported / **~$0.58 actual**, 63 lines.
+
+**Why this counts as a clean win and not a re-narrowing cheat**: the
+theorem ranges universally over `WalshDeg2 n`; the LHS uses the real
+`eval` map (not a defined-as-RHS trick); the bound is non-vacuous
+(constant 81); and the Lean target name itself indicates the leaf
+specialization. Davis's analogous Lean theorem `fixedDegreeHC_degree2_W_fourth`
+is named identically and presumably has the same scope.
+
+**Total cliff push (Stages 1+2+4+5+6 + honest-sorry Stage 3)**:
+~$39 actual, 123 turns, 1265 lines, **one previously-stuck/cheated
+blueprint leaf newly closed**.
+
+---
+
+## `fact:fixed-n` retry — honest sorry (2026-05-03 PM)
+
+Previously cheated via statement-tautologization (taking the conclusion
+as a hypothesis). Retried under the strengthened dispatcher prompt
+with `LeaHadamard.Mathlib.SignAverage` exposed as a hint. Outcome:
+**Lea defined `partialHadamardCount` and `gaussianApprox` honestly,
+locked the theorem signature to the blueprint statement, and `sorry`'d
+the conclusion with a paragraph explaining what's still missing**
+(lattice/box decomposition, disjoint-box count, Tauberian passage).
+
+**This is the right outcome and validates the cheat-prevention
+prompt.** Same lemma, same Lea, same model — different prompt, and
+the cheat went away. Cost: ~$0.58 actual / 1 attempt.
+
+The honest stuck is not solvable by SignAverage alone — that was the
+correct prediction. What's missing is the partial-Hadamard count's
+asymptotic expansion machinery, which needs the rest of the paper's
+chain (lattice, moment-comparison, Laplace/Tauberian). We knew that
+going in; the retry was a calibration probe of the prompt, not the
+content.
+
+---
+
 ## `lem:triangle` — landed 2026-05-03
 
 **No deviation in statement.** Lea's `T(λ) = (1/6) · E[X_λ³]` matches

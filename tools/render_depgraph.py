@@ -38,8 +38,26 @@ STATUS_STROKE = {
 }
 
 
+# Davis's blueprint bundles some logically-distinct sub-claims under one node
+# label. We dispatch the splits separately; this maps the bundled label to its
+# sub-labels so a fully-landed bundle renders as `done`.
+BUNDLED_SPLITS: dict[str, list[str]] = {
+    "lem:lambda-facts": [
+        "lem:psi-translate",
+        "lem:disjoint-boxes",
+        "lem:lambda-card",
+        "lem:even-degree",
+    ],
+}
+
+
 def collect_status(tracker_paths: list[Path]) -> dict[str, str]:
-    """Merge all tracker files into a label -> status dict."""
+    """Merge all tracker files into a label -> status dict.
+
+    Bundled labels (see BUNDLED_SPLITS) inherit status from their splits:
+    `done` if all splits done; `in_progress` if some done; `stuck` if any
+    stuck and none done; otherwise pending.
+    """
     out: dict[str, str] = {}
     for p in tracker_paths:
         try:
@@ -51,6 +69,15 @@ def collect_status(tracker_paths: list[Path]) -> dict[str, str]:
                 out[label] = "done"  # done wins over anything
             elif label not in out:
                 out[label] = entry.get("status", "pending")
+    for bundled, splits in BUNDLED_SPLITS.items():
+        split_statuses = [out.get(s, "pending") for s in splits]
+        if all(s == "done" for s in split_statuses):
+            out[bundled] = "done"
+        elif any(s == "done" for s in split_statuses):
+            out[bundled] = "in_progress"
+        elif any(s == "stuck" for s in split_statuses):
+            out[bundled] = "stuck"
+        # else leave as whatever was there (pending by default).
     return out
 
 
