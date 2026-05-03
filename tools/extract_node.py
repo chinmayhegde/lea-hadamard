@@ -14,8 +14,30 @@ ENV_RE = re.compile(
 LABEL_RE = re.compile(r"\\label\{([^}]+)\}")
 
 
+def strip_tex_comments(src: str) -> str:
+    """Remove TeX line comments. Treats `%` as comment-start when it isn't escaped."""
+    out_lines = []
+    for line in src.splitlines():
+        # find first % that's not preceded by an odd number of backslashes
+        i = 0
+        while i < len(line):
+            if line[i] == "%":
+                # count preceding backslashes
+                j = i - 1
+                bs = 0
+                while j >= 0 and line[j] == "\\":
+                    bs += 1
+                    j -= 1
+                if bs % 2 == 0:
+                    line = line[:i]
+                    break
+            i += 1
+        out_lines.append(line)
+    return "\n".join(out_lines)
+
+
 def main():
-    src = open(sys.argv[1]).read()
+    src = strip_tex_comments(open(sys.argv[1]).read())
     target = sys.argv[2]
     for m in ENV_RE.finditer(src):
         body = m.group(1)
