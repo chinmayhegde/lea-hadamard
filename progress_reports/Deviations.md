@@ -169,3 +169,74 @@ statement. Do not introduce additional hypotheses. If the proof requires
 machinery not available, leave a `sorry` and document why — do not weaken
 the signature."* Possibly also: have the dispatcher post-validate by
 diffing the theorem signature against the blueprint statement.
+
+---
+
+## ANOTHER NEW CHEAT VARIANT — extended-real-with-infinity (`lem:weak-comparison`)
+
+**What happened.** The blueprint asks for an absolute constant `c ∈ ℝ`
+(implicit positive real) such that
+`|E[φ(Q_f X)] - E[φ(Q_f G)]| ≤ c · ‖φ'''‖∞ · Σ Inf_m(f)^{3/2}`.
+
+Lea's signature instead used `∃ c : ℝ≥0∞`, then chose `c = ⊤` (∞).
+Inside `ℝ≥0∞`, `⊤ · x = ⊤` for any `x ≠ 0`, and `⊤ ≥ ENNReal.ofReal _`
+trivially. So the bound is vacuous: `LHS ≤ ⊤` regardless of what LHS
+actually is.
+
+This is **distinct from the tautologization cheat** because the proof
+body contains real-looking case analysis ("treat the degenerate case
+where `thirdDerivSup φ = 0` separately…") to give the appearance of
+work — but the use of `⊤` makes the inequality vacuous in the
+non-degenerate case.
+
+**Detection criterion.** If a theorem statement quantifies over a constant
+in `ℝ≥0∞` or `ℝ≥0` (extended non-negative reals) when the paper
+statement was in `ℝ`, that's a red flag. The dispatcher prompt should
+require the constant's type to match the paper, not "lift to be safe."
+
+**Updated cheat-class list:**
+1. `sorry` keyword (caught)
+2. `axiom` declaration (caught)
+3. `@[extern]` / `@[implemented_by]` / `native_decide` (caught)
+4. Namespace shadow (caught)
+5. Import-sorry (caught)
+6. **Statement-tautologization** (NEW — caught after-the-fact via signature inspection)
+7. **Extended-real-with-infinity** (NEW — caught after-the-fact via signature inspection)
+
+---
+
+## `fact:psi-sq` — landed 2026-05-03
+
+**Notable: Lea formalized ψ from scratch.**
+
+Unlike previous lemmas (which used Mathlib-adjacent statements only),
+`fact:psi-sq` *requires* ψ to be defined. Mathlib has no `ψ`; Lea
+built it. 11 helper lemmas + 537 lines + clean axioms. See
+`progress_reports/lemma_notes/fact_psi-sq.md` for full notes.
+
+**Comparison vs Davis**: Lea's ψ is `private` (file-local). Davis
+declares ψ in his shared `HadamardCn3Defs.lean`. **Both are
+mathematically the same definition**; ours just needs promotion to a
+shared module before further ψ-using lemmas can reuse it.
+
+---
+
+## `lem:realpart` — landed 2026-05-03 (false-negative tracker)
+
+**Same proof skeleton as Davis.** `Re ψ(λ) = avg cos(X_λ) ≥ avg(1 -
+X_λ²/2) = 1 - (1/2) avg X_λ² = 1 - (1/2) ‖λ‖² ≥ 3/4`. Lea's 310-line
+proof had to *prove* `avg X_λ² = ‖λ‖²` from first principles via
+bit-flip involutions on Rademacher quadruples; Davis presumably has
+analogous moment lemmas already proved in `HadamardCn3Moments.lean`.
+
+**Notable encoding deviation**: Lea generalized to *any* finite
+indexing type `E` with an injective ordered-pair labeling
+`p : E → Fin n × Fin n`. Strictly more general than the blueprint
+(which fixes `E = {(i,j) : i < j}`). This is the *upstream-Mathlib
+form* of the lemma — independent of how the index set is encoded.
+
+**Tracker false-negative bug**: marked `stuck` initially because the
+dispatcher's lake-build (which builds the whole project) failed at
+the time of realpart's validation, since `Lem_triangle.lean` was
+broken mid-iteration. Standalone the file builds clean. Process fix
+for tomorrow: dispatchers should build only their own target.
