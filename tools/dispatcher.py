@@ -187,6 +187,17 @@ INSTRUCTIONS:
        or `Unit` instead of a real type) to make the theorem hold by
        computation.
 
+   (e) **Placeholder-by-definition cheats**. Defining a name (e.g. `Q`,
+       `psi`, `T`, `fourthQ`) to literally equal the right-hand side of
+       the equation you're meant to prove, then proving by `rfl` /
+       `unfold; rfl`. Even if you document this in a comment, the
+       theorem is vacuous. The named subject must mean what the blueprint
+       says it means (e.g. `Q` should be defined as the actual fourth
+       cumulant `E[X^4] - 3·E[X^2]^2`, not as the closed-form right-hand
+       side). If the genuine subject can't yet be expressed because
+       prerequisite infrastructure is missing, leave a `sorry` instead
+       of defining a placeholder that trivializes the equation.
+
 9. If the proof is genuinely beyond reach — missing Mathlib infrastructure,
    needs deep external machinery, or requires definitions you cannot
    reasonably build — leave a `sorry` plus a one-paragraph comment explaining

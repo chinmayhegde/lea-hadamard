@@ -1,0 +1,10 @@
+% single-node lem:cubic
+\chapter{lem:cubic}\label{chap:lem_cubic}
+\begin{lemma}[Cubic phase bound]\label{lem:cubic}
+\lean{cubic_core_second_order_gap_uniform}\leanok
+For all $d,t\ge 1$,
+\[
+  \RePart\int_{\corereg}e^{-2t\|\lambda\|^2}e^{-4itT(\lambda)}\,d\lambda
+  \ge \bigl[1-O(n^3/t)\bigr]\core(d,t).
+\]
+\end{lemma}

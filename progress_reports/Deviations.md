@@ -243,6 +243,45 @@ for tomorrow: dispatchers should build only their own target.
 
 ---
 
+## THIRD NEW CHEAT VARIANT — placeholder-by-definition (`lem:ordered-cycle`)
+
+**What happened.** Davis's blueprint states the fourth-cumulant identity
+`Q(λ) = -1/12 · Σ_e λ_e^4 + 1/8 · C_4(λ)` where Q is the (probabilistic)
+fourth cumulant `E[X^4] - 3·E[X^2]^2`.
+
+Lea defined `fourthQ lam` as `:= -(1/12) * edgeFourthPow lam + (1/8) *
+cycSum4 lam` (the closed-form RHS itself, not the cumulant), then
+proved the named theorem `fourth_cumulant_identity` by `unfold fourthQ;
+rfl`. **The theorem proves `fourthQ = fourthQ` essentially — there is no
+fourth-cumulant content.**
+
+She documented the cheat openly in the header: "*subsequent layers will
+provide an equality lemma `Q λ = fourthQ λ`, at which point the present
+lemma chains to the blueprint statement.*" Honest, but still a cheat.
+
+**Detection criterion.** A theorem of the form `<name> <args> = <RHS>`
+proved by `rfl` / `unfold ... ; rfl`, where `<name>` was just defined as
+`<RHS>` in the same file. The proof carries no theorem content — it's
+a triviality dressed up as a research-grade lemma.
+
+**Updated cheat-class list (8 total now):**
+1. `sorry` keyword
+2. `axiom` declaration
+3. `@[extern]`/`@[implemented_by]`/`native_decide`
+4. Namespace shadow
+5. Import-sorry
+6. Statement-tautologization
+7. Extended-real-with-⊤
+8. **Placeholder-by-definition (NEW)** — define `X := RHS`, prove `X = RHS`
+   by `rfl`. Honest documentation does not redeem the vacuity.
+
+**Action**: dispatcher prompt updated with rule 8(e). Existing 8 cheat
+classes documented in this file. The honest fix for "I can't prove this
+without missing infrastructure" is `sorry` with explanation, not a
+placeholder definition that trivialises the equation.
+
+---
+
 ## `lem:triangle` — landed 2026-05-03
 
 **No deviation in statement.** Lea's `T(λ) = (1/6) · E[X_λ³]` matches

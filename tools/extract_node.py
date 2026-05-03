@@ -37,14 +37,25 @@ def strip_tex_comments(src: str) -> str:
 
 
 def main():
-    src = strip_tex_comments(open(sys.argv[1]).read())
+    import os
+    path = sys.argv[1]
     target = sys.argv[2]
-    for m in ENV_RE.finditer(src):
-        body = m.group(1)
-        labels = LABEL_RE.findall(body)
-        if target in labels:
-            print(body)
-            return 0
+    if os.path.isdir(path):
+        sources = []
+        for root, _, files in os.walk(path):
+            for f in files:
+                if f.endswith(".tex"):
+                    sources.append(os.path.join(root, f))
+    else:
+        sources = [path]
+    for src_path in sorted(sources):
+        src = strip_tex_comments(open(src_path).read())
+        for m in ENV_RE.finditer(src):
+            body = m.group(1)
+            labels = LABEL_RE.findall(body)
+            if target in labels:
+                print(body)
+                return 0
     print(f"label {target!r} not found in {sys.argv[1]}", file=sys.stderr)
     return 1
 
