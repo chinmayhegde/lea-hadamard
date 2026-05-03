@@ -146,13 +146,42 @@ INSTRUCTIONS:
 2. Inside, declare the theorem with name `{node.lean}` and prove it.
 3. The Lake project lives at `{lake_root}`. Use `lean_check` with that path
    (or its files) to verify your work, and `search_mathlib` for relevant lemmas.
-4. The final proof must NOT contain `sorry`. Stop as soon as `lean_check`
-   returns clean.
+4. The final proof must NOT contain `sorry` UNLESS the proof is genuinely
+   beyond reach (see point 9). Stop as soon as `lean_check` returns clean.
 5. Do not modify any file other than the OUTPUT FILE above.
 6. Do not redefine any lemma that already exists in Mathlib under the same name.
 7. Strongly prefer the curated Mathlib hints above over re-deriving from scratch.
    When in doubt, search via signature (`search_mathlib` with type-shaped query)
    rather than by name guessing.
+
+8. ⚠ THEOREM SIGNATURE MUST MATCH THE BLUEPRINT STATEMENT.
+   Hypotheses, conclusion, and types of bound variables must reflect what the
+   LaTeX statement says. The following are CHEATS that we explicitly detect:
+
+   (a) Adding a hypothesis whose body is the conclusion (or implies it). This
+       turns the theorem into `∀ x, P x → P x` — provable by `:= h`. If you
+       find yourself writing `:= hHC` or `exact hConclusion` as the entire
+       proof, you are cheating; stop and add a `sorry` instead.
+
+   (b) Lifting a real-valued bound to `ℝ≥0∞` or `ℝ≥0` and using `⊤` / `∞`
+       as the bounding constant. The bound becomes vacuous. If the blueprint
+       statement is in `ℝ`, the theorem must be in `ℝ`.
+
+   (c) Generalising specific objects to universal hypotheses. If the statement
+       talks about a specific `N` (e.g. count of partial Hadamard matrices),
+       do NOT take `(N : ℕ → ℕ → ℝ)` as a generic hypothesis; either define
+       `N` (or use a placeholder) or leave a `sorry`.
+
+   (d) Choosing a structurally trivial codomain (e.g. `Bool` instead of `ℝ`,
+       or `Unit` instead of a real type) to make the theorem hold by
+       computation.
+
+9. If the proof is genuinely beyond reach — missing Mathlib infrastructure,
+   needs deep external machinery, or requires definitions you cannot
+   reasonably build — leave a `sorry` plus a one-paragraph comment explaining
+   exactly what's missing. This is the CORRECT failure mode. We will not
+   penalise honest `sorry`-with-explanation; we WILL reject signature
+   mutations that hide the failure.
 """
 
 
@@ -220,10 +249,19 @@ def parse_lea_success(output: str) -> bool:
     return True
 
 
-def lake_build(lake_root: Path, lake_log_path: Path) -> tuple[bool, str]:
-    """Run `lake build` in the project root; return (success, log)."""
+def lake_build(lake_root: Path, lake_log_path: Path,
+               target: str | None = None) -> tuple[bool, str]:
+    """Run `lake build [target]` in the project root; return (success, log).
+
+    Pass `target` (e.g. "LeaHadamard.Hadamard.Lem_xxx") to build only that
+    module + its dependencies, avoiding cross-contamination from other
+    in-flight files when multiple dispatchers run concurrently.
+    """
+    cmd = ["lake", "build"]
+    if target:
+        cmd.append(target)
     proc = subprocess.run(
-        ["lake", "build"], capture_output=True, text=True, cwd=str(lake_root), timeout=900,
+        cmd, capture_output=True, text=True, cwd=str(lake_root), timeout=900,
     )
     output = (proc.stdout or "") + "\n" + (proc.stderr or "")
     lake_log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -317,9 +355,11 @@ def main():
         tracker[node.label].cost_usd += cost
         print(f"  Lea: success={ok_lea} cost=~${cost:.4f} log={lea_log}")
 
-        # Validate with lake build regardless of Lea's self-reported success.
+        # Validate with single-target lake build to avoid cross-contamination
+        # from other concurrent dispatchers' in-flight files.
         lake_log = logs_dir / f"{node.label.replace(':', '_')}.lake.log"
-        ok_lake, lake_out = lake_build(args.lake_root, lake_log)
+        target_module = str(target_rel.with_suffix("")).replace("/", ".")
+        ok_lake, lake_out = lake_build(args.lake_root, lake_log, target=target_module)
         if ok_lake and target_abs.exists():
             tracker[node.label].status = "done"
             tracker[node.label].completed_at = datetime.now(timezone.utc).isoformat()
