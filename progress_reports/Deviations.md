@@ -240,3 +240,22 @@ dispatcher's lake-build (which builds the whole project) failed at
 the time of realpart's validation, since `Lem_triangle.lean` was
 broken mid-iteration. Standalone the file builds clean. Process fix
 for tomorrow: dispatchers should build only their own target.
+
+---
+
+## `lem:triangle` — landed 2026-05-03
+
+**No deviation in statement.** Lea's `T(λ) = (1/6) · E[X_λ³]` matches
+the blueprint exactly. Same proof skeleton as the standard moment-method
+argument: cube, count even-multiplicity multigraphs, identify triangles,
+multiply by 6.
+
+**Cost-per-line is the highest yet** ($117 / 888 lines = ~$0.13/line vs
+~$0.05/line for analytic lemmas). Lea hit 119+ turns, most of them
+debugging `simp` behavior inside `Finset.sum` of `if-then-else`
+expressions. **Combinatorial / index-manipulation content costs more
+than analytic content** at the current Mathlib tactic state.
+
+**File**: `LeaHadamard/Hadamard/Lem_triangle.lean` (888 lines).
+**Cost**: ~$117 actual.
+**Trust**: clean Mathlib axioms.

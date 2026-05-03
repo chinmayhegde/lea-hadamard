@@ -784,39 +784,105 @@ private noncomputable def BalancedSet (n : ℕ) :
 private lemma sum_balanced_eq_six_T {n : ℕ} (lam : Fin n → Fin n → ℝ) :
     (∑ s ∈ BalancedSet n, lam s.1.1 s.1.2 * lam s.2.1.1 s.2.1.2 *
         lam s.2.2.1 s.2.2.2) = 6 * T lam := by
-  -- Reverse direction via a bijection from `Tset n × Fin 6` to `BalancedSet n`.
-  -- First express RHS = ∑_{t} ∑_{κ} λ_p λ_q λ_r using lam_prod_order.
-  have hRHS : (6 : ℝ) * T lam =
+  -- Use bijection between (Tset n) × (Fin 6) and BalancedSet n.
+  have key : (∑ s ∈ BalancedSet n, lam s.1.1 s.1.2 * lam s.2.1.1 s.2.1.2 *
+        lam s.2.2.1 s.2.2.2) =
       ∑ tk ∈ (Tset n) ×ˢ (Finset.univ : Finset (Fin 6)),
         lam (order tk.1 tk.2).1.1 (order tk.1 tk.2).1.2 *
         lam (order tk.1 tk.2).2.1.1 (order tk.1 tk.2).2.1.2 *
         lam (order tk.1 tk.2).2.2.1 (order tk.1 tk.2).2.2.2 := by
-    rw [Finset.sum_product]
-    -- ∑ t ∈ Tset n, ∑ κ ∈ univ, ...
-    have : ∀ t ∈ Tset n, ∀ κ ∈ (Finset.univ : Finset (Fin 6)),
-        lam (order t κ).1.1 (order t κ).1.2 *
-        lam (order t κ).2.1.1 (order t κ).2.1.2 *
-        lam (order t κ).2.2.1 (order t κ).2.2.2 =
-        lam t.1 t.2.1 * lam t.1 t.2.2 * lam t.2.1 t.2.2 := by
-      intro t _ κ _
-      exact lam_prod_order lam κ
-    rw [Finset.sum_congr rfl
-      (fun t ht => Finset.sum_congr rfl (fun κ hκ => this t ht κ hκ))]
-    simp [Finset.sum_const, T, Tset, mul_comm]
-  rw [hRHS]
-  -- Now use Finset.sum_bij' with forward `order`.
-  refine (Finset.sum_nbij' (fun s _ => order s.1 s.2)
-    (fun s hs => Classical.choose (balanced_is_order s.1 s.2.1 s.2.2
-      ((Finset.mem_product.mp ((Finset.mem_filter.mp hs).1)).1)
-      ((Finset.mem_product.mp ((Finset.mem_product.mp ((Finset.mem_filter.mp hs).1)).2)).1)
-      ((Finset.mem_product.mp ((Finset.mem_product.mp ((Finset.mem_filter.mp hs).1)).2)).2)
-      ((Finset.mem_filter.mp hs).2)).choose_spec.choose_spec.choose,
-      Classical.choose (balanced_is_order s.1 s.2.1 s.2.2
-        ((Finset.mem_product.mp ((Finset.mem_filter.mp hs).1)).1)
-        ((Finset.mem_product.mp ((Finset.mem_product.mp ((Finset.mem_filter.mp hs).1)).2)).1)
-        ((Finset.mem_product.mp ((Finset.mem_product.mp ((Finset.mem_filter.mp hs).1)).2)).2)
-        ((Finset.mem_filter.mp hs).2))) ?_ ?_ ?_ ?_ ?_).symm
-  -- Forward into BalancedSet.
-  all_goals sorry
+    refine (Finset.sum_nbij (fun tk => order tk.1 tk.2) ?_ ?_ ?_ ?_).symm
+    · -- Maps into BalancedSet.
+      intro tk htk
+      rcases Finset.mem_product.mp htk with ⟨ht, _⟩
+      have hij : tk.1.1 < tk.1.2.1 := (Finset.mem_filter.mp ht).2.1
+      have hjk : tk.1.2.1 < tk.1.2.2 := (Finset.mem_filter.mp ht).2.2
+      simp only [BalancedSet, Finset.mem_filter, Finset.mem_product]
+      refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
+      · exact (order_pairs_in_Pset hij hjk tk.2).1
+      · exact (order_pairs_in_Pset hij hjk tk.2).2.1
+      · exact (order_pairs_in_Pset hij hjk tk.2).2.2
+      · intro x
+        exact order_balanced (i := tk.1.1) (j := tk.1.2.1) (k := tk.1.2.2) hij hjk tk.2 x
+    · -- Injectivity.
+      intro a ha b hb hab
+      rcases Finset.mem_product.mp ha with ⟨hta, _⟩
+      rcases Finset.mem_product.mp hb with ⟨htb, _⟩
+      have hija : a.1.1 < a.1.2.1 := (Finset.mem_filter.mp hta).2.1
+      have hjka : a.1.2.1 < a.1.2.2 := (Finset.mem_filter.mp hta).2.2
+      have hijb : b.1.1 < b.1.2.1 := (Finset.mem_filter.mp htb).2.1
+      have hjkb : b.1.2.1 < b.1.2.2 := (Finset.mem_filter.mp htb).2.2
+      -- Decompose a, b into components.
+      obtain ⟨⟨a1, a21, a22⟩, aκ⟩ := a
+      obtain ⟨⟨b1, b21, b22⟩, bκ⟩ := b
+      -- Need: (a1, a21, a22, aκ) = (b1, b21, b22, bκ).
+      simp only at hija hjka hijb hjkb hab
+      -- Brute case bash on κ values.
+      fin_cases aκ <;> fin_cases bκ <;>
+        (simp only [order, Prod.mk.injEq] at hab) <;>
+        (try (obtain ⟨⟨ha1, ha2⟩, ⟨hb1, hb2⟩, ⟨hc1, hc2⟩⟩ := hab;
+              subst_eqs; rfl)) <;>
+        (exfalso; omega)
+    · -- Surjectivity.
+      intro s hs
+      simp only [BalancedSet, Finset.coe_filter, Finset.mem_product,
+                 Set.mem_setOf_eq] at hs
+      obtain ⟨⟨hp, hq, hr⟩, hbal⟩ := hs
+      obtain ⟨t, ht, κ, hord⟩ := balanced_is_order s.1 s.2.1 s.2.2 hp hq hr hbal
+      refine ⟨(t, κ), ?_, ?_⟩
+      · simp [ht]
+      · -- order t κ = (s.1, s.2.1, s.2.2) = s
+        have : s = (s.1, s.2.1, s.2.2) := rfl
+        rw [this]; exact hord
+    · -- Function value congruence.
+      intro tk _
+      rfl
+  rw [key]
+  -- Now compute the sum using lam_prod_order.
+  rw [Finset.sum_product]
+  have h_per_κ : ∀ t : Fin n × Fin n × Fin n, ∀ κ : Fin 6,
+      lam (order t κ).1.1 (order t κ).1.2 *
+      lam (order t κ).2.1.1 (order t κ).2.1.2 *
+      lam (order t κ).2.2.1 (order t κ).2.2.2 =
+      lam t.1 t.2.1 * lam t.1 t.2.2 * lam t.2.1 t.2.2 := by
+    intros t κ; exact lam_prod_order lam κ
+  rw [Finset.sum_congr rfl (fun t _ =>
+    Finset.sum_congr rfl (fun κ _ => h_per_κ t κ))]
+  simp only [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
+  rw [← Finset.mul_sum]
+  push_cast
+  ring_nf
+  rfl
+
+/-- Triangle formula:  $T(\lambda) = \tfrac16 \mathbb{E}[X_\lambda^3]$. -/
+theorem triangle_formula {n : ℕ} (lam : Fin n → Fin n → ℝ) :
+    T lam =
+      (1 / 6 : ℝ) *
+        ((1 / (2 ^ n : ℝ)) *
+          ∑ ξ : Fin n → Bool, (X lam ξ) ^ 3) := by
+  rw [sum_X_cubed_eq lam]
+  -- The triple sum equals 2^n · ∑_{Balanced} λλλ.
+  have hb : ∑ p ∈ Pset n, ∑ q ∈ Pset n, ∑ r ∈ Pset n,
+        (if Balanced p q r then lam p.1 p.2 * lam q.1 q.2 * lam r.1 r.2 else 0) =
+      ∑ s ∈ BalancedSet n, lam s.1.1 s.1.2 * lam s.2.1.1 s.2.1.2 *
+        lam s.2.2.1 s.2.2.2 := by
+    -- Convert nested sum to single sum over Pset^3, then filter.
+    rw [show (∑ p ∈ Pset n, ∑ q ∈ Pset n, ∑ r ∈ Pset n,
+            (if Balanced p q r then lam p.1 p.2 * lam q.1 q.2 * lam r.1 r.2 else 0)) =
+          ∑ s ∈ Pset n ×ˢ Pset n ×ˢ Pset n,
+            (if Balanced s.1 s.2.1 s.2.2 then
+              lam s.1.1 s.1.2 * lam s.2.1.1 s.2.1.2 * lam s.2.2.1 s.2.2.2
+             else 0) from ?_]
+    · -- Sum with `if` filter equals sum over filtered set.
+      rw [← Finset.sum_filter]
+      apply Finset.sum_congr
+      · simp only [BalancedSet, Balanced]
+        ext; simp
+      · intros; rfl
+    · rw [Finset.sum_product]
+      refine Finset.sum_congr rfl (fun p _ => ?_)
+      rw [Finset.sum_product]
+  rw [hb, sum_balanced_eq_six_T lam]
+  field_simp
 
 end LeaHadamard.Hadamard
