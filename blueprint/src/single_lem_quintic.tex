@@ -1,0 +1,10 @@
+% single-node lem:quintic
+\chapter{lem:quintic}\label{chap:lem_quintic}
+\begin{lemma}[Quintic bound]\label{lem:quintic}
+\lean{quinticP5_pointwise_bound}\leanok
+There is $C_3'>0$ such that
+\[
+  \int_{\corereg}P(\lambda)^2 e^{-2t\|\lambda\|^2}\,d\lambda
+  \le C_3'\frac{n^5}{t^5}\core(d,t).
+\]
+\end{lemma}

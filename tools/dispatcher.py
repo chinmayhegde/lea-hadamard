@@ -157,6 +157,29 @@ LOCAL PROJECT MODULES YOU CAN IMPORT:
   the L⁴-L² bound for linear forms
   (`avgSigns_linearX_fourth_le_three_sq_second_sq`), and the two-variable
   base case `bonami_two_point_two_var`.
+- `LeaHadamard.Mathlib.GaussianMoments` — moment bounds for Gaussian
+  linear forms on `EuclideanSpace ℝ (Fin d)`:
+  `gaussWeight t x := exp(-2t‖x‖²)`,
+  `gaussNormConst d t := (π/(2t))^(d/2)`,
+  `gaussLinear a x := ⟨a, x⟩`.
+  Headline existentials: `gauss_linear_sq_bound` (`∃ C, ∀ d t a,
+  ∫ ⟨a,x⟩² · gaussWeight ≤ C·‖a‖²·(d/t)·gaussNormConst`),
+  `gauss_linear_fourth_bound` (analogous at `(d/t)²`),
+  `gauss_linear_pow_bound k` (general `(d/t)^k`). Note the bounds
+  carry a `(d/t)^k` factor (Cauchy-Schwarz reduction), not the
+  d-independent `t^(-k)` of the exact Gaussian moment — sufficient
+  for downstream integrals like `lem:cubic`, `lem:quintic`. Constants
+  are concrete (`√2 · k!`).
+- `LeaHadamard.Hadamard.Functionals` — Davis-paper functionals and
+  generic cumulants of `(Fin n → Bool) → ℝ` random variables:
+  `moment n k f := avgSigns n (f · ^ k)`,
+  `cumulant{3,4,5} n f` (genuine moment-polynomial cumulants, not
+  closed-form RHS), `cumulant{3,4,5}_of_centered` simplifications when
+  `m₁ = 0`. Davis's wrappers: `T_func p lam := (1/6)·κ₃(X_λ)`,
+  `Q_func p lam := (1/24)·κ₄(X_λ)`, `P_func p lam := (1/120)·κ₅(X_λ)`,
+  plus their centered-form versions. USE THIS to express T(λ), Q(λ),
+  P(λ) appearing in `lem:sixth`, `lem:ordered-cycle`, etc.; do not
+  redefine them.
 - `LeaHadamard.Mathlib.Hypercontractive` — the degree-2 hypercontractive
   bound on the discrete cube. Defines `WalshDeg1`/`WalshDeg2` structures
   with explicit constant/linear/quadratic coefficient fields, evaluation
@@ -222,6 +245,23 @@ INSTRUCTIONS:
        side). If the genuine subject can't yet be expressed because
        prerequisite infrastructure is missing, leave a `sorry` instead
        of defining a placeholder that trivializes the equation.
+
+   (f) **Existential-witness-trivialization cheats**. When the blueprint
+       statement is of the form `∃ T Q P : ..., ∀ λ, log ψ(λ) = ... + ...`
+       (i.e. existentially quantified functionals plus an equation or
+       norm bound), do NOT choose witnesses that absorb the lemma's
+       content. Specifically: do not pick `T = 0`, `Q = Re(log ψ) + ½s`,
+       `P = Im(log ψ)` (or any algebraic combination of the LHS named
+       subject). Such witnesses make the bracketed combination equal
+       the LHS by construction, the deviation `E₆` identically zero,
+       and the bound vacuously true. The named functionals MUST mean
+       what the paper says they mean — if `LeaHadamard.Hadamard.Functionals`
+       has canonical definitions (`T_func`, `Q_func`, `P_func`), the
+       existential witnesses must be those canonical definitions (or
+       provably equal to them). Honest fallback: if you cannot prove
+       the bound with the canonical witnesses, leave a `sorry` with
+       explanation. Do NOT exploit the existential quantifier to
+       trivialize.
 
 9. If the proof is genuinely beyond reach — missing Mathlib infrastructure,
    needs deep external machinery, or requires definitions you cannot
