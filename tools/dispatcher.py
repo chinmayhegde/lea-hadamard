@@ -157,20 +157,47 @@ INSTRUCTIONS:
 
 
 def run_lea(prompt: str, lea_root: Path, model: str | None,
-            max_turns: int, lea_log_path: Path) -> tuple[bool, str, float]:
-    """Invoke `uv run lea` with the prompt, capture full output."""
+            max_turns: int, lea_log_path: Path,
+            wall_timeout: int = 14400) -> tuple[bool, str, float]:
+    """Invoke `uv run lea` with the prompt, streaming output to the log file
+    in real time so progress is visible during long runs. Kills the child
+    process if `wall_timeout` seconds elapse."""
     cmd = ["uv", "run", "lea", "--max-turns", str(max_turns)]
     if model:
         cmd.extend(["-m", model])
     cmd.append(prompt)
-    t0 = time.time()
-    proc = subprocess.run(
-        cmd, capture_output=True, text=True, cwd=str(lea_root), timeout=7200,
-    )
-    elapsed = time.time() - t0
-    output = (proc.stdout or "") + "\n" + (proc.stderr or "")
     lea_log_path.parent.mkdir(parents=True, exist_ok=True)
-    lea_log_path.write_text(output)
+
+    captured: list[str] = []
+    t0 = time.time()
+    with open(lea_log_path, "w") as logf:
+        proc = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            text=True, cwd=str(lea_root), bufsize=1,
+        )
+        try:
+            assert proc.stdout is not None
+            while True:
+                line = proc.stdout.readline()
+                if line:
+                    logf.write(line)
+                    logf.flush()
+                    captured.append(line)
+                elif proc.poll() is not None:
+                    break
+                if time.time() - t0 > wall_timeout:
+                    proc.kill()
+                    msg = f"\n[dispatcher: killed after {wall_timeout}s wall timeout]\n"
+                    logf.write(msg)
+                    logf.flush()
+                    captured.append(msg)
+                    break
+        finally:
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+    output = "".join(captured)
     cost = parse_lea_cost(output)
     success = parse_lea_success(output)
     return success, output, cost

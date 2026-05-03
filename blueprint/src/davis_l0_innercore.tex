@@ -1,0 +1,16 @@
+% Single-node blueprint: Davis layer-0 leaf `lem:inner-core`.
+% Gaussian core-mass lower bound.
+
+\chapter{Davis layer-0 — Inner-core Gaussian mass}
+\label{chap:davis-l0-innercore}
+
+\begin{lemma}[Core Gaussian mass]
+\label{lem:inner-core}
+\lean{LeaHadamard.Hadamard.inner_core_gaussian_mass}
+There exists an absolute constant $c_* > 0$ such that for every integer
+$d \ge 1$ and every real $t \ge 1$,
+\[
+  \int_{\{\lambda \in \mathbb{R}^d : \|\lambda\|^2 \le d/t\}} e^{-2t\,\|\lambda\|^2}\,d\lambda
+  \;\ge\; (1 - e^{-c_* d})\,(\pi/(2t))^{d/2}.
+\]
+\end{lemma}

@@ -1,0 +1,15 @@
+% Single-node blueprint: Davis layer-0 leaf `lem:gaussian-quadratic`.
+% The classical Fresnel integral identity for complex symmetric matrices.
+
+\chapter{Davis layer-0 — Gaussian quadratic integral}
+\label{chap:davis-l0-quadratic}
+
+\begin{lemma}[Gaussian quadratic integral]
+\label{lem:gaussian-quadratic}
+\lean{LeaHadamard.Hadamard.gaussian_integral_formula}
+Let $A$ be a complex symmetric $m \times m$ matrix whose real part is
+positive definite. Then
+\[
+  \int_{\mathbb{R}^m} e^{-x^\top A x}\,dx = \pi^{m/2}\,\det(A)^{-1/2}.
+\]
+\end{lemma}
