@@ -268,7 +268,7 @@ def lake_build(lake_root: Path, lake_log_path: Path,
     lake_log_path.write_text(output)
     if proc.returncode != 0:
         return False, output
-    if "uses 'sorry'" in output:
+    if re.search(r"uses\s+[`']sorry[`']", output):
         return False, output + "\n[REJECTED: sorry detected]"
     if re.search(r"\berror:", output):
         return False, output
