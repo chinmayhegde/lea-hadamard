@@ -180,6 +180,22 @@ LOCAL PROJECT MODULES YOU CAN IMPORT:
   plus their centered-form versions. USE THIS to express T(λ), Q(λ),
   P(λ) appearing in `lem:sixth`, `lem:ordered-cycle`, etc.; do not
   redefine them.
+- `LeaHadamard.Mathlib.WalshOrthogonality` — Walsh-character infrastructure
+  at general degree:
+  `chi S σ := ∏ i in S, rad (σ i)` (Walsh character indexed by a finset),
+  `chi_empty σ = 1`,
+  `chi_mul_chi : chi S σ · chi T σ = chi (symmDiff S T) σ`,
+  `avgSigns_chi_eq_zero_of_nonempty : S.Nonempty → avgSigns n (chi S) = 0`
+  (proved via the bit-flip involution on `Fin n → Bool`),
+  `avgSigns_chi_mul_chi : avgSigns n (chi S · chi T) = if S = T then 1 else 0`
+  (full Parseval-like orthogonality), plus four specializations of the
+  4-fold `rad` product:
+  `avgSigns_rad_four_same` (= 1 when all four indices equal),
+  `avgSigns_rad_two_pairs` (= 1 when two distinct pairs),
+  `avgSigns_rad_three_distinct_one_match` (= 0 when one index repeats and
+  two others are distinct), `avgSigns_rad_four_distinct` (= 0 when all
+  four indices are distinct). USE THIS for any 4-fold or higher
+  edge/index orthogonality computation in `lem:ordered-cycle`.
 - `LeaHadamard.Mathlib.Hypercontractive` — the degree-2 hypercontractive
   bound on the discrete cube. Defines `WalshDeg1`/`WalshDeg2` structures
   with explicit constant/linear/quadratic coefficient fields, evaluation
