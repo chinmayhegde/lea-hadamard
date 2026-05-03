@@ -1,0 +1,13 @@
+% single-node fact:psi-sq
+\chapter{fact:psi-sq}\label{chap:fact_psi_sq}
+\begin{lemma}[Cosine-product bound]
+\label{fact:psi-sq}
+\lean{LeaHadamard.Hadamard.universal_magnitude_bound_full}
+Let $\xi_1, \dots, \xi_n$ be independent Rademacher signs, and define
+$\psi(\gamma) := \mathbb{E}\bigl[\exp(i \sum_{i<j} \gamma_{\{i,j\}}\,\xi_i\,\xi_j)\bigr]$.
+Then for every $\gamma \in [-\pi,\pi]^d$ (with $d=\binom{n}{2}$) and every
+$k \in \{1, \dots, n\}$,
+\[
+  |\psi(\gamma)|^2 \le \tfrac12 + \tfrac12 \prod_{i\ne k}\cos\bigl(2\gamma_{\{i,k\}}\bigr).
+\]
+\end{lemma}

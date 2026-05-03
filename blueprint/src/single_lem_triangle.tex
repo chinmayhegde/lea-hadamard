@@ -1,0 +1,11 @@
+% single-node lem:triangle
+\chapter{lem:triangle}\label{chap:lem_triangle}
+\begin{lemma}[Triangle formula]
+\label{lem:triangle}
+\lean{LeaHadamard.Hadamard.triangle_formula}
+For every $\lambda \in \mathbb{R}^d$ (with $d = \binom{n}{2}$) and Rademacher
+signs $\xi_1, \dots, \xi_n$, define $X_\lambda := \sum_{i<j}
+\lambda_{\{i,j\}}\,\xi_i\,\xi_j$ and
+$T(\lambda) := \sum_{i<j<k}\lambda_{\{i,j\}}\lambda_{\{i,k\}}\lambda_{\{j,k\}}$.
+Then $T(\lambda) = \tfrac16 \mathbb{E}[X_\lambda^3]$.
+\end{lemma}

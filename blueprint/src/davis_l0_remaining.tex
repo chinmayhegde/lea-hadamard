@@ -1,0 +1,82 @@
+% Single file containing the 7 remaining layer-0 leaves of Davis's blueprint.
+% Each leaf gets its own \lean{} target in the LeaHadamard.Hadamard namespace
+% so we can dispatch them independently via separate trackers.
+
+\chapter{Davis layer-0 — remaining leaves}
+\label{chap:davis-l0-remaining}
+
+\begin{lemma}[Gaussian quadratic integral (retry)]
+\label{lem:gaussian-quadratic-2}
+\lean{LeaHadamard.Hadamard.gaussian_integral_formula}
+Let $A$ be a complex symmetric $m \times m$ matrix whose real part is
+positive definite. Then
+\[
+  \int_{\mathbb{R}^m} e^{-x^\top A x}\,dx = \pi^{m/2}\,\det(A)^{-1/2}.
+\]
+\end{lemma}
+
+\begin{lemma}[Hypercontractive inequality]
+\label{lem:hc}
+\lean{LeaHadamard.Hadamard.fixedDegreeHC_degree2_W_fourth}
+Let $H$ be a polynomial of degree at most $q$ in either independent
+Rademacher signs or independent centered Gaussians. Then for every
+$p \ge 2$,
+\[
+  \|H\|_{L^p} \le (p-1)^{q/2} \|H\|_{L^2}.
+\]
+\end{lemma}
+
+\begin{lemma}[Lindeberg comparison]
+\label{lem:weak-comparison}
+\lean{LeaHadamard.Hadamard.quadraticForm_lindeberg_comparison_C3}
+Let $f : [n]^2 \to \mathbb{R}$ be symmetric with $f(i,i) = 0$, and define
+$Q_f(z) := \sum_{i,j} f(i,j) z_i z_j$ and
+$\mathrm{Inf}_m(f) := \sum_j f(m,j)^2$.
+If $X_1, \dots, X_n$ are independent Rademacher signs,
+$G_1, \dots, G_n$ are i.i.d.\ $N(0,1)$, and $\varphi : \mathbb{R} \to
+\mathbb{R}$ is $C^3$, then there is an absolute constant $c$ such that
+\[
+  \bigl|\,\mathbb{E}[\varphi(Q_f(X))] - \mathbb{E}[\varphi(Q_f(G))]\,\bigr|
+  \;\le\; c\,\|\varphi'''\|_\infty\,\sum_{m=1}^n \mathrm{Inf}_m(f)^{3/2}.
+\]
+\end{lemma}
+
+\begin{lemma}[Triangle formula]
+\label{lem:triangle}
+\lean{LeaHadamard.Hadamard.triangle_formula}
+For every $\lambda \in \mathbb{R}^d$ (with $d = \binom{n}{2}$) and Rademacher
+signs $\xi_1, \dots, \xi_n$, define $X_\lambda := \sum_{i<j}
+\lambda_{\{i,j\}}\,\xi_i\,\xi_j$ and
+$T(\lambda) := \sum_{i<j<k}\lambda_{\{i,j\}}\lambda_{\{i,k\}}\lambda_{\{j,k\}}$.
+Then $T(\lambda) = \tfrac16 \mathbb{E}[X_\lambda^3]$.
+\end{lemma}
+
+\begin{lemma}[Cosine-product bound]
+\label{fact:psi-sq}
+\lean{LeaHadamard.Hadamard.universal_magnitude_bound_full}
+Let $\xi_1, \dots, \xi_n$ be independent Rademacher signs, and define
+$\psi(\gamma) := \mathbb{E}\bigl[\exp(i \sum_{i<j} \gamma_{\{i,j\}}\,\xi_i\,\xi_j)\bigr]$.
+Then for every $\gamma \in [-\pi,\pi]^d$ (with $d=\binom{n}{2}$) and every
+$k \in \{1, \dots, n\}$,
+\[
+  |\psi(\gamma)|^2 \le \tfrac12 + \tfrac12 \prod_{i\ne k}\cos\bigl(2\gamma_{\{i,k\}}\bigr).
+\]
+\end{lemma}
+
+\begin{lemma}[Positivity of $\mathrm{Re}\,\psi$]
+\label{lem:realpart}
+\lean{LeaHadamard.Hadamard.re_psi_taylor4_decomposition}
+With $\psi$ as in the cosine-product bound and
+$s(\lambda) := \sum_{e}\lambda_e^2$, if $s(\lambda) \le 1/2$, then
+$\mathrm{Re}\,\psi(\lambda) \in [3/4, 1]$.
+\end{lemma}
+
+\begin{lemma}[Fixed-$n$ count asymptotic]
+\label{fact:fixed-n}
+\lean{LeaHadamard.Hadamard.fixed_n_count_asymptotic}
+Let $N_{n,t}$ be the number of $n \times t$ partial Hadamard matrices, and
+$A_{n,t} := \binom{2n}{n}^{t/2}$ (or the appropriate Gaussian
+approximation; see paper for the precise normalization). Then for every
+fixed integer $n \ge 2$, $N_{n,4t} = [1 + o_{t\to\infty}(1)]\,A_{n,4t}$
+as $t \to \infty$.
+\end{lemma}

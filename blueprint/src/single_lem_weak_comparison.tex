@@ -1,0 +1,16 @@
+% single-node lem:weak-comparison
+\chapter{lem:weak-comparison}\label{chap:lem_weak_comparison}
+\begin{lemma}[Lindeberg comparison]
+\label{lem:weak-comparison}
+\lean{LeaHadamard.Hadamard.quadraticForm_lindeberg_comparison_C3}
+Let $f : [n]^2 \to \mathbb{R}$ be symmetric with $f(i,i) = 0$, and define
+$Q_f(z) := \sum_{i,j} f(i,j) z_i z_j$ and
+$\mathrm{Inf}_m(f) := \sum_j f(m,j)^2$.
+If $X_1, \dots, X_n$ are independent Rademacher signs,
+$G_1, \dots, G_n$ are i.i.d.\ $N(0,1)$, and $\varphi : \mathbb{R} \to
+\mathbb{R}$ is $C^3$, then there is an absolute constant $c$ such that
+\[
+  \bigl|\,\mathbb{E}[\varphi(Q_f(X))] - \mathbb{E}[\varphi(Q_f(G))]\,\bigr|
+  \;\le\; c\,\|\varphi'''\|_\infty\,\sum_{m=1}^n \mathrm{Inf}_m(f)^{3/2}.
+\]
+\end{lemma}

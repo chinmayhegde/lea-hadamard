@@ -1,0 +1,11 @@
+% single-node lem:gaussian-quadratic-2
+\chapter{lem:gaussian-quadratic-2}\label{chap:lem_gaussian_quadratic_2}
+\begin{lemma}[Gaussian quadratic integral (retry)]
+\label{lem:gaussian-quadratic-2}
+\lean{LeaHadamard.Hadamard.gaussian_integral_formula}
+Let $A$ be a complex symmetric $m \times m$ matrix whose real part is
+positive definite. Then
+\[
+  \int_{\mathbb{R}^m} e^{-x^\top A x}\,dx = \pi^{m/2}\,\det(A)^{-1/2}.
+\]
+\end{lemma}

@@ -1,0 +1,11 @@
+% single-node fact:fixed-n
+\chapter{fact:fixed-n}\label{chap:fact_fixed_n}
+\begin{lemma}[Fixed-$n$ count asymptotic]
+\label{fact:fixed-n}
+\lean{LeaHadamard.Hadamard.fixed_n_count_asymptotic}
+Let $N_{n,t}$ be the number of $n \times t$ partial Hadamard matrices, and
+$A_{n,t} := \binom{2n}{n}^{t/2}$ (or the appropriate Gaussian
+approximation; see paper for the precise normalization). Then for every
+fixed integer $n \ge 2$, $N_{n,4t} = [1 + o_{t\to\infty}(1)]\,A_{n,4t}$
+as $t \to \infty$.
+\end{lemma}
