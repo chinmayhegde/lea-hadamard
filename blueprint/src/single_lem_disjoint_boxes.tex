@@ -1,0 +1,13 @@
+% single-node lem:disjoint-boxes
+\chapter{lem:disjoint-boxes}\label{chap:lem_disjoint_boxes}
+\begin{lemma}[Disjointness of $\Lambda$-translated boxes]
+\label{lem:disjoint-boxes}
+\lean{LeaHadamard.Hadamard.translated_edgeBoxes_disjoint}
+Let $0 < \delta < \pi/4$. For each $\lambda \in \Lambda$, let
+$\Bbox_\delta(\lambda) := \lambda + (-\delta,\,\delta)^d \subset \mathbb{T}^d$.
+Then the family $\{\Bbox_\delta(\lambda)\}_{\lambda \in \Lambda}$ is
+pairwise disjoint: for any two distinct $\lambda, \lambda' \in \Lambda$,
+\[
+  \Bbox_\delta(\lambda) \cap \Bbox_\delta(\lambda') \;=\; \emptyset.
+\]
+\end{lemma}

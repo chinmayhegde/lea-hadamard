@@ -1,0 +1,31 @@
+% single-node lem:psi-translate
+\chapter{lem:psi-translate}\label{chap:lem_psi_translate}
+\begin{lemma}.
+% We split them into four dispatchable single-node entries, each with
+% its own \label and \lean target, mirroring Davis's private-lemma names.
+%
+% Notation (from Davis's Section "Notation"):
+%   n >= 2, d = binom(n,2),  index set is the edges {i,j} of the complete graph K_n.
+%   For lambda in T^d (or R^d), psi(lambda) = E[ exp(i * sum_{i<j} lambda_{i,j} xi_i xi_j) ]
+%   where xi_1, ..., xi_n are independent Rademacher signs.
+%   Bbox_delta = (-delta, delta)^d  is the open d-cube of half-width delta.
+%   Lambda_0 = (pi/2) * Z^d / (2 pi Z)^d   (the half-pi lattice on the torus).
+%   Lambda  subset Lambda_0  is the sub-lattice of "even" lattice points
+%            characterized in entry (4) below.
+%   For lambda in Lambda_0, lambda^{(2)} in {0,1}^d is the mod-2 reduction
+%   (lambda_e in {0, pi/2} mod pi gives lambda^{(2)}_e in {0,1}), and
+%   G_{lambda^{(2)}} is the subgraph of K_n whose edges are those e with
+%   lambda^{(2)}_e = 1.
+
+\chapter{Lambda facts}
+\label{chap:lambda-facts}
+
+\begin{lemma}[Multiplicativity of $\psi$ under $\Lambda$-translation]
+\label{lem:psi-translate}
+\lean{LeaHadamard.Hadamard.psi_translate_lambdaReal}
+For every $\lambda \in \Lambda$ and every $\gamma \in \Bbox_{\pi/4}
+:= (-\pi/4,\,\pi/4)^d$,
+\[
+  \psi(\lambda + \gamma) \;=\; \psi(\lambda)\,\psi(\gamma).
+\]
+\end{lemma}

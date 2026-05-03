@@ -137,6 +137,17 @@ ALREADY-PROVEN PREREQUISITES YOU MAY USE:
 RELEVANT MATHLIB LEMMAS (curated hints — these are likely useful):
 {hints_text}
 
+LOCAL PROJECT MODULES YOU CAN IMPORT:
+- `LeaHadamard.Defs` — canonical shared definitions: `psi`, `psiMatrix`,
+  `Xform`, `phaseMatrix`, `rad`, `sval` plus `rad_sq`, `rad_pow_two`, etc.
+- `LeaHadamard.Hadamard.Lambda` — the lattice `Λ` (`Lambda`), the half-π
+  parent lattice `Lambda_0`, the predicate `InLambda`, mod-2 reduction,
+  vertex-degree, plus `mem_Lambda` (membership simp). USE THIS rather
+  than redefining Λ from scratch.
+
+If you need `ψ`, `Λ`, `X_λ`, `s(λ)`, or related objects, **check these
+modules first via `bash cat <path>` and `import` them**, do not redefine.
+
 OUTPUT FILE (absolute path):
 {target_path}
 
